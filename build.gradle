@@ -1,0 +1,138 @@
+plugins {
+    id 'java'
+    id "com.github.spacialcircumstances.gradle-cucumber-reporting" version "0.1.25"
+    id "jacoco"
+    id 'org.sonarqube' version '4.4.0.3356'
+    id 'maven-publish'
+    id("io.github.oleksiiparf.slack-webhook") version "1.0.0"
+    id("de.zebrajaeger.sendMail") version "0.1.1"
+}
+
+group = 'com.example'
+version = '1.0-HichemBoulacheb'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'io.cucumber:cucumber-java:6.0.0'
+    testImplementation 'io.cucumber:cucumber-junit:6.0.0'
+    testImplementation 'junit:junit:4.12'
+}
+
+cucumberReports {
+    outputDir = file('build/reports/cucumber/html')
+    buildId = '0'
+    reports = files('build/reports/cucumber/cucumber.json')
+}
+
+jacoco {
+    toolVersion = "0.8.10" // Version actuelle de JaCoCo
+}
+
+sonarqube {
+    properties {
+        property "sonar.projectKey", "TP5"
+        property "sonar.host.url", "http://localhost:9000"
+        property "sonar.login", "293eb0ec63b776e8dbe00bedc08a2103ad6628db"
+    }
+}
+
+jacocoTestReport {
+    dependsOn test // S'assure que les tests sont exécutés avant le rapport
+    reports {
+        xml.required = true
+        csv.required = false
+        html.required = true
+        html.outputLocation = layout.buildDirectory.dir("reports/jacoco")
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            groupId = 'BoulachebHichem'
+            artifactId = 'my-library'
+            version = '1.0.0'
+        }
+    }
+    repositories {
+        maven {
+            name = "myrepo"
+            url = uri("https://mymavenrepo.com/repo/cEmjfkxugPlzLxXg1A2B/")
+            credentials {
+                username = "myMavenRepo"
+                password = "test0005"
+            }
+        }
+    }
+}
+
+tasks.register('generateDocs', Javadoc) {
+    group = 'Documentation'
+    description = 'Génère la documentation Java'
+    source = sourceSets.main.allJava
+    classpath = sourceSets.main.compileClasspath
+    destinationDir = file("$buildDir/docs")
+}
+
+slack {
+    publishedPlugin {
+        webHook = "https://hooks.slack.com/services/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"
+        attachment {
+            fallback = "New version successfully published."
+            pretext = "New version successfully published."
+            color = "good"
+            field {
+                title = "Module"
+                value = project.name
+                shortValue = true
+            }
+            field {
+                title = "Version"
+                value = project.version
+                shortValue = true
+            }
+        }
+        attachment {
+            fallback = "Another line on sent together."
+            pretext = "Another line on sent together."
+            color = "good"
+            field {
+                title = "Something"
+                value = "Something text"
+            }
+        }
+    }
+}
+
+sendMail {
+    smtpServer {
+        host "smtp.gmail.com"
+        port 587
+        user "lh_boulacheb@esi.dz"
+        password "vkdw pttl iwsi fugg"
+    }
+    mail {
+        from "lh_boulacheb@esi.dz"
+        to "lh_boulacheb@esi.dz"
+        subject = "TP5 Deployment"
+        body = "Hello! The library has been deployed."
+    }
+}
+
+test {
+    useJUnit()
+    finalizedBy jacocoTestReport
+}
+
+
+
+tasks.sonar {
+    dependsOn test
+}
+
+publish.finalizedBy(tasks.named("postPublishedPluginToSlack"))
+publish.finalizedBy(tasks.named("sendMail"))

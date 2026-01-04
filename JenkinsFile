@@ -1,0 +1,33 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                // Sur Windows : utilisez gradlew.bat
+                sh './gradlew clean build'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh './gradlew test'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build réussi !'
+        }
+        failure {
+            echo 'Build échoué.'
+        }
+    }
+}
