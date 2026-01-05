@@ -2,182 +2,182 @@ pipeline {
     agent any
 
     environment {
-        SONAR_HOST_URL = 'http://localhost:9000' // URL de votre SonarQube
-        SONAR_TOKEN = credentials('sonarqube-token') // ID du credential dans Jenkins
-        MAVEN_REPO_CREDENTIALS = credentials('mymavenrepo-credentials') // ID du credential
-        SLACK_CHANNEL = '#dev-notifications' // Canal Slack
-        EMAIL_RECIPIENTS = 'dev-team@example.com' // Liste des emails
+        SONARQUBE = 'SonarQube' // nom du serveur SonarQube configuré dans Jenkins
+        MAVEN_REPO_URL = 'https://mymavenrepo.com/repo/cEmjfkxugPlzLxXg1A2B/'
+        SLACK_CHANNEL = '#dev-team'
+        EMAIL_RECIPIENTS = 'lh_boulacheb@esi.dz'
+    }
+
+    options {
+        skipStagesAfterUnstable()
     }
 
     stages {
+
+        // ===========================
         stage('Test') {
             steps {
-                script {
-                    echo '========== Phase Test =========='
+                echo "Phase Test: Lancement des tests unitaires"
+                bat 'gradlew.bat clean test'
 
-                    // 1. Lancement des tests unitaires
-                    sh 'mvn clean test'
+                echo "Archivage des résultats des tests unitaires"
+                junit 'build/test-results/test/*.xml'
 
-                    // 2. Archivage des résultats des tests unitaires
-                    junit '**/target/surefire-reports/*.xml'
-
-                    // 3. Génération des rapports de tests Cucumber
-                    cucumber buildStatus: 'UNSTABLE',
-                            reportTitle: 'Cucumber Report',
-                            fileIncludePattern: '**/cucumber.json',
-                            trendsLimit: 10
-                }
+                echo "Génération des rapports Cucumber"
+                bat 'gradlew.bat cucumberReports'
             }
         }
 
+        // ===========================
         stage('Code Analysis') {
             steps {
-                script {
-                    echo '========== Phase Code Analysis =========='
-
-                    withSonarQubeEnv('SonarQube') { // 'SonarQube' est le nom du serveur configuré dans Jenkins
-                        sh """
-                            mvn sonar:sonar \
-                            -Dsonar.projectKey=your-project-key \
-                            -Dsonar.host.url=${SONAR_HOST_URL} \
-                            -Dsonar.login=${SONAR_TOKEN}
-                        """
-                    }
+                echo "Analyse du code avec SonarQube"
+                withSonarQubeEnv(SONARQUBE) {
+                    bat 'gradlew.bat sonarqube'
                 }
             }
         }
 
+        // ===========================
         stage('Code Quality') {
             steps {
-                script {
-                    echo '========== Phase Code Quality =========='
-
-                    timeout(time: 5, unit: 'MINUTES') {
-                        waitForQualityGate abortPipeline: true
-                    }
+                echo "Vérification des Quality Gates"
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
 
+        // ===========================
         stage('Build') {
             steps {
-                script {
-                    echo '========== Phase Build =========='
-
-                    // 1. Génération du fichier Jar (skip tests car déjà exécutés)
-                    sh 'mvn clean package -DskipTests'
-
-                    // 2. Génération de la documentation
-                    sh 'mvn javadoc:javadoc'
-
-                    // 3. Archivage du fichier Jar et de la documentation
-                    archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
-                    archiveArtifacts artifacts: '**/target/site/apidocs/**', fingerprint: true
-                }
+                echo "Génération du Jar et de la documentation"
+                bat 'gradlew.bat jar generateDocs'
+                archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'build/docs/**', fingerprint: true
             }
         }
 
+        // ===========================
         stage('Deploy') {
             steps {
-                script {
-                    echo '========== Phase Deploy =========='
-
-                    // Déploiement vers mymavenrepo.com
-                    sh """
-                        mvn deploy:deploy-file \
-                        -DgroupId=com.example \
-                        -DartifactId=your-artifact-id \
-                        -Dversion=\${BUILD_NUMBER} \
-                        -Dpackaging=jar \
-                        -Dfile=target/*.jar \
-                        -DrepositoryId=mymavenrepo \
-                        -Durl=https://mymavenrepo.com/repo/your-repo-path
-                    """
-                }
+                echo "Déploiement du Jar sur Maven repo"
+                bat 'gradlew.bat publish'
             }
         }
 
-        stage('Notification') {
-            steps {
-                script {
-                    echo '========== Phase Notification =========='
-
-                    // Notification par email
-                    emailext(
-                        subject: "✅ Déploiement réussi - Build #${BUILD_NUMBER}",
-                        body: """
-                            <h2>Déploiement réussi</h2>
-                            <p><strong>Projet:</strong> ${JOB_NAME}</p>
-                            <p><strong>Build:</strong> #${BUILD_NUMBER}</p>
-                            <p><strong>Statut:</strong> SUCCESS</p>
-                            <p><strong>URL:</strong> ${BUILD_URL}</p>
-                        """,
-                        to: "${EMAIL_RECIPIENTS}",
-                        mimeType: 'text/html'
-                    )
-
-                    // Notification Slack
-                    slackSend(
-                        channel: "${SLACK_CHANNEL}",
-                        color: 'good',
-                        message: "✅ Déploiement réussi - ${JOB_NAME} #${BUILD_NUMBER} (<${BUILD_URL}|Voir les détails>)"
-                    )
-                }
-            }
-        }
     }
 
     post {
-        failure {
+        always {
+            echo "Génération du rapport Cucumber"
             script {
-                echo '========== Notification d\'échec =========='
+                try {
+                    cucumber buildStatus: 'UNSTABLE',
+                            failedFeaturesNumber: 1,
+                            failedScenariosNumber: 1,
+                            skippedStepsNumber: 1,
+                            failedStepsNumber: 1,
+                            reportTitle: 'Cucumber Test Report',
+                            fileIncludePattern: '**/cucumber-report.json',
+                            sortingMethod: 'ALPHABETICAL',
+                            trendsLimit: 100
+                } catch (Exception e) {
+                    echo "Erreur lors de la génération du rapport Cucumber: ${e.message}"
+                }
+            }
+        }
 
-                // Notification par email en cas d'échec
-                emailext(
-                    subject: "❌ Échec du pipeline - Build #${BUILD_NUMBER}",
-                    body: """
-                        <h2>Échec du pipeline</h2>
-                        <p><strong>Projet:</strong> ${JOB_NAME}</p>
-                        <p><strong>Build:</strong> #${BUILD_NUMBER}</p>
-                        <p><strong>Statut:</strong> FAILURE</p>
-                        <p><strong>Phase échouée:</strong> ${STAGE_NAME}</p>
-                        <p><strong>URL:</strong> ${BUILD_URL}</p>
-                        <p>Veuillez consulter les logs pour plus de détails.</p>
-                    """,
-                    to: "${EMAIL_RECIPIENTS}",
-                    mimeType: 'text/html'
-                )
+        success {
+            echo "Pipeline terminé avec succès: Notification par mail et Slack"
 
-                // Notification Slack en cas d'échec
-                slackSend(
-                    channel: "${SLACK_CHANNEL}",
-                    color: 'danger',
-                    message: "❌ Échec du pipeline - ${JOB_NAME} #${BUILD_NUMBER} - Phase: ${STAGE_NAME} (<${BUILD_URL}|Voir les détails>)"
-                )
+            script {
+                try {
+                    // Envoi mail
+                    emailext(
+                        to: "${EMAIL_RECIPIENTS}",
+                        subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            <h2>Pipeline exécuté avec succès</h2>
+                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                            <p><strong>Statut:</strong> SUCCESS</p>
+                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                            <p>Le déploiement a été effectué avec succès.</p>
+                        """,
+                        mimeType: 'text/html'
+                    )
+
+                    // Envoi Slack
+                    slackSend(
+                        channel: "${SLACK_CHANNEL}",
+                        color: 'good',
+                        message: "✅ Pipeline réussi: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
+                    )
+                } catch (Exception e) {
+                    echo "Erreur lors de l'envoi des notifications de succès: ${e.message}"
+                }
+            }
+        }
+
+        failure {
+            echo "Pipeline échoué: Notification par mail et Slack"
+
+            script {
+                try {
+                    // Mail de notification en cas d'échec
+                    emailext(
+                        to: "${EMAIL_RECIPIENTS}",
+                        subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            <h2>Pipeline échoué</h2>
+                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                            <p><strong>Statut:</strong> ${currentBuild.currentResult}</p>
+                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                            <p>Veuillez consulter les logs pour plus de détails.</p>
+                        """,
+                        mimeType: 'text/html'
+                    )
+
+                    // Slack de notification en cas d'échec
+                    slackSend(
+                        channel: "${SLACK_CHANNEL}",
+                        color: 'danger',
+                        message: "❌ Pipeline échoué: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
+                    )
+                } catch (Exception e) {
+                    echo "Erreur lors de l'envoi des notifications d'échec: ${e.message}"
+                }
             }
         }
 
         unstable {
-            script {
-                // Notification en cas de build instable
-                emailext(
-                    subject: "⚠️ Build instable - Build #${BUILD_NUMBER}",
-                    body: """
-                        <h2>Build instable</h2>
-                        <p><strong>Projet:</strong> ${JOB_NAME}</p>
-                        <p><strong>Build:</strong> #${BUILD_NUMBER}</p>
-                        <p><strong>Statut:</strong> UNSTABLE</p>
-                        <p><strong>URL:</strong> ${BUILD_URL}</p>
-                    """,
-                    to: "${EMAIL_RECIPIENTS}",
-                    mimeType: 'text/html'
-                )
+            echo "Pipeline instable: Notification par mail et Slack"
 
-                slackSend(
-                    channel: "${SLACK_CHANNEL}",
-                    color: 'warning',
-                    message: "⚠️ Build instable - ${JOB_NAME} #${BUILD_NUMBER} (<${BUILD_URL}|Voir les détails>)"
-                )
+            script {
+                try {
+                    emailext(
+                        to: "${EMAIL_RECIPIENTS}",
+                        subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            <h2>Pipeline instable</h2>
+                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                            <p><strong>Statut:</strong> UNSTABLE</p>
+                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                        """,
+                        mimeType: 'text/html'
+                    )
+
+                    slackSend(
+                        channel: "${SLACK_CHANNEL}",
+                        color: 'warning',
+                        message: "⚠️ Pipeline instable: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
+                    )
+                } catch (Exception e) {
+                    echo "Erreur lors de l'envoi des notifications d'instabilité: ${e.message}"
+                }
             }
         }
     }
