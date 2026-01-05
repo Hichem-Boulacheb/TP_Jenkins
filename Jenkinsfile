@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE = 'SonarQube' // nom du serveur SonarQube configuré dans Jenkins
+        SONARQUBE = 'sonar' // nom du serveur SonarQube configuré dans Jenkins
         MAVEN_REPO_URL = 'https://mymavenrepo.com/repo/cEmjfkxugPlzLxXg1A2B/'
         SLACK_CHANNEL = '#dev-team'
         EMAIL_RECIPIENTS = 'lh_boulacheb@esi.dz'
