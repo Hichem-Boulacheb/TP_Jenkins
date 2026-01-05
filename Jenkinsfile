@@ -80,6 +80,21 @@ pipeline {
             // Envoi Slack via Gradle plugin
             bat 'gradlew.bat postPublishedPluginToSlack'
         }
+        always {
+                cucumber buildStatus: 'UNSTABLE',
+                        failedFeaturesNumber: 1,
+                        failedScenariosNumber: 1,
+                        skippedStepsNumber: 1,
+                        failedStepsNumber: 1,
+                        classifications: [
+                                [key: 'Commit', value: '<a href="${GERRIT_CHANGE_URL}">${GERRIT_PATCHSET_REVISION}</a>'],
+                                [key: 'Submitter', value: '${GERRIT_PATCHSET_UPLOADER_NAME}']
+                        ],
+                        reportTitle: 'My report',
+                        fileIncludePattern: '**/*cucumber-report.json',
+                        sortingMethod: 'ALPHABETICAL',
+                        trendsLimit: 100
+        }
 
         failure {
             echo "Pipeline échoué: Notification par mail et Slack"
