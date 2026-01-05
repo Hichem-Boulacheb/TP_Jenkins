@@ -1,11 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        maven 'Maven-3.9.0' // Nom configuré dans Jenkins Global Tool Configuration
-        jdk 'JDK-17' // Nom configuré dans Jenkins Global Tool Configuration
-    }
-
     environment {
         SONAR_HOST_URL = 'http://localhost:9000' // URL de votre SonarQube
         SONAR_TOKEN = credentials('sonarqube-token') // ID du credential dans Jenkins
