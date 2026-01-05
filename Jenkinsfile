@@ -2,15 +2,12 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE = 'SonarQube' // nom du serveur SonarQube configuré dans Jenkins
-        MAVEN_REPO_URL = 'https://mymavenrepo.com/repo/cEmjfkxugPlzLxXg1A2B/'
-        MAVEN_CREDENTIALS_ID = 'maven-credentials' // si utilisé dans Jenkins
-        SLACK_CHANNEL = '#dev-team'
-        EMAIL_RECIPIENTS = 'lh_boulacheb@esi.dz'
+        SONARQUBE = 'SonarQube'
     }
 
     options {
         skipStagesAfterUnstable()
+        timestamps()
     }
 
     stages {
@@ -18,22 +15,23 @@ pipeline {
         // ===========================
         stage('Test') {
             steps {
-                echo "Phase Test: Lancement des tests unitaires"
+                echo "Running unit tests"
                 bat 'gradlew.bat clean test'
 
-                echo "Archivage des résultats des tests unitaires"
+                echo "Publishing JUnit results"
                 junit 'build/test-results/test/*.xml'
 
-                echo "Génération des rapports Cucumber"
+                echo "Generating Cucumber reports"
                 bat 'gradlew.bat cucumberReports'
-                archiveArtifacts 'build/reports/cucumber/html/**/*.html'
+
+                archiveArtifacts artifacts: 'build/reports/cucumber/html/**', fingerprint: true
             }
         }
 
         // ===========================
         stage('Code Analysis') {
             steps {
-                echo "Analyse du code avec SonarQube"
+                echo "Running SonarQube analysis"
                 withSonarQubeEnv(SONARQUBE) {
                     bat 'gradlew.bat sonarqube'
                 }
@@ -43,7 +41,7 @@ pipeline {
         // ===========================
         stage('Code Quality') {
             steps {
-                echo "Vérification des Quality Gates"
+                echo "Waiting for Quality Gate"
                 timeout(time: 2, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -53,8 +51,9 @@ pipeline {
         // ===========================
         stage('Build') {
             steps {
-                echo "Génération du Jar et de la documentation"
+                echo "Building Jar & documentation"
                 bat 'gradlew.bat jar generateDocs'
+
                 archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
                 archiveArtifacts artifacts: 'build/docs/**', fingerprint: true
             }
@@ -63,50 +62,21 @@ pipeline {
         // ===========================
         stage('Deploy') {
             steps {
-                echo "Déploiement du Jar sur Maven repo"
-                bat "gradlew.bat publish"
+                echo "Publishing to Maven repository"
+                bat 'gradlew.bat publish'
             }
         }
-
     }
 
     post {
         success {
-            echo "Pipeline terminé avec succès: Notification par mail et Slack"
-
-            // Envoi mail via Gradle plugin
-            bat 'gradlew.bat sendMail'
-
-            // Envoi Slack via Gradle plugin
-            bat 'gradlew.bat postPublishedPluginToSlack'
-        }
-        always {
-                cucumber buildStatus: 'UNSTABLE',
-                        failedFeaturesNumber: 1,
-                        failedScenariosNumber: 1,
-                        skippedStepsNumber: 1,
-                        failedStepsNumber: 1,
-                        classifications: [
-                                [key: 'Commit', value: '<a href="${GERRIT_CHANGE_URL}">${GERRIT_PATCHSET_REVISION}</a>'],
-                                [key: 'Submitter', value: '${GERRIT_PATCHSET_UPLOADER_NAME}']
-                        ],
-                        reportTitle: 'My report',
-                        fileIncludePattern: '**/*cucumber-report.json',
-                        sortingMethod: 'ALPHABETICAL',
-                        trendsLimit: 100
+            echo "Pipeline SUCCESS ✅"
+            echo "Notifications handled by Gradle (Slack + Mail)"
         }
 
         failure {
-            echo "Pipeline échoué: Notification par mail et Slack"
-
-            // Mail de notification en cas d'échec
-            mail to: EMAIL_RECIPIENTS,
-                 subject: "Pipeline Failure: ${currentBuild.fullDisplayName}",
-                 body: "Le pipeline a échoué à l'étape ${currentBuild.currentResult}."
-
-            slackSend channel: SLACK_CHANNEL,
-                      color: 'danger',
-                      message: "Pipeline échoué: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            echo "Pipeline FAILED ❌"
+            echo "Notifications handled by Gradle (Slack + Mail)"
         }
     }
 }
