@@ -22,9 +22,6 @@ pipeline {
 
                 echo "Archivage des résultats des tests unitaires"
                 junit 'build/test-results/test/*.xml'
-
-                echo "Génération des rapports Cucumber"
-                bat 'gradlew.bat cucumberReports'
             }
         }
 
@@ -52,9 +49,9 @@ pipeline {
         stage('Build') {
             steps {
                 echo "Génération du Jar et de la documentation"
-                bat 'gradlew.bat jar generateDocs'
+                bat 'gradlew.bat jar javadoc'
                 archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
-                archiveArtifacts artifacts: 'build/docs/**', fingerprint: true
+                archiveArtifacts artifacts: 'build/docs/javadoc/**', fingerprint: true, allowEmptyArchive: true
             }
         }
 
@@ -70,22 +67,8 @@ pipeline {
 
     post {
         always {
-            echo "Génération du rapport Cucumber"
-            script {
-                try {
-                    cucumber buildStatus: 'UNSTABLE',
-                            failedFeaturesNumber: 1,
-                            failedScenariosNumber: 1,
-                            skippedStepsNumber: 1,
-                            failedStepsNumber: 1,
-                            reportTitle: 'Cucumber Test Report',
-                            fileIncludePattern: '**/cucumber-report.json',
-                            sortingMethod: 'ALPHABETICAL',
-                            trendsLimit: 100
-                } catch (Exception e) {
-                    echo "Erreur lors de la génération du rapport Cucumber: ${e.message}"
-                }
-            }
+            echo "Nettoyage et archivage des artefacts"
+            // Pas de rapport Cucumber dans ce projet
         }
 
         success {
