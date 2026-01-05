@@ -1,55 +1,167 @@
-> Task :compileJava UP-TO-DATE
+pipeline {
+    agent any
 
-> Task :processResources NO-SOURCE
+    environment {
+        SONARQUBE = 'sonar' // nom du serveur SonarQube configuré dans Jenkins
+        MAVEN_REPO_URL = 'https://mymavenrepo.com/repo/cEmjfkxugPlzLxXg1A2B/'
+        SLACK_CHANNEL = '#dev-team'
+        EMAIL_RECIPIENTS = 'lh_boulacheb@esi.dz'
+    }
 
-> Task :classes UP-TO-DATE
+    options {
+        skipStagesAfterUnstable()
+    }
 
-> Task :compileTestJava UP-TO-DATE
+    stages {
 
+        // ===========================
+        stage('Test') {
+            steps {
+                echo "Phase Test: Lancement des tests unitaires"
+                bat 'gradlew.bat clean test'
 
-> Task :sonarqube
+                echo "Archivage des résultats des tests unitaires"
+                junit 'build/test-results/test/*.xml'
+            }
+        }
 
-Task 'sonarqube' is deprecated. Use 'sonar' instead.
+        // ===========================
+        stage('Code Analysis') {
+            steps {
+                echo "Analyse du code avec SonarQube"
+                withSonarQubeEnv(SONARQUBE) {
+                    bat 'gradlew.bat sonar'
+                }
+            }
+        }
 
+        // ===========================
+        stage('Code Quality') {
+            steps {
+                echo "Vérification des Quality Gates"
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
-> Task :sonarqube FAILED
+        // ===========================
+        stage('Build') {
+            steps {
+                echo "Génération du Jar et de la documentation"
+                bat 'gradlew.bat jar javadoc'
+                archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+                archiveArtifacts artifacts: 'build/docs/javadoc/**', fingerprint: true, allowEmptyArchive: true
+            }
+        }
 
+        // ===========================
+        stage('Deploy') {
+            steps {
+                echo "Déploiement du Jar sur Maven repo"
+                bat 'gradlew.bat publish'
+            }
+        }
 
-[Incubating] Problems report is available at: file:///C:/ProgramData/Jenkins/.jenkins/workspace/TP_main/build/reports/problems/problems-report.html
+    }
 
+    post {
+        always {
+            echo "Nettoyage et archivage des artefacts"
+            // Pas de rapport Cucumber dans ce projet
+        }
 
-FAILURE: Build failed with an exception.
+        success {
+            echo "Pipeline terminé avec succès: Notification par mail et Slack"
 
+            script {
+                try {
+                    // Envoi mail
+                    emailext(
+                        to: "${EMAIL_RECIPIENTS}",
+                        subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            <h2>Pipeline exécuté avec succès</h2>
+                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                            <p><strong>Statut:</strong> SUCCESS</p>
+                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                            <p>Le déploiement a été effectué avec succès.</p>
+                        """,
+                        mimeType: 'text/html'
+                    )
 
-* What went wrong:
+                    // Envoi Slack
+                    slackSend(
+                        channel: "${SLACK_CHANNEL}",
+                        color: 'good',
+                        message: "✅ Pipeline réussi: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
+                    )
+                } catch (Exception e) {
+                    echo "Erreur lors de l'envoi des notifications de succès: ${e.message}"
+                }
+            }
+        }
 
-Execution failed for task ':sonarqube'.
+        failure {
+            echo "Pipeline échoué: Notification par mail et Slack"
 
-> Not authorized. Please check the properties sonar.login and sonar.password.
+            script {
+                try {
+                    // Mail de notification en cas d'échec
+                    emailext(
+                        to: "${EMAIL_RECIPIENTS}",
+                        subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            <h2>Pipeline échoué</h2>
+                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                            <p><strong>Statut:</strong> ${currentBuild.currentResult}</p>
+                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                            <p>Veuillez consulter les logs pour plus de détails.</p>
+                        """,
+                        mimeType: 'text/html'
+                    )
 
+                    // Slack de notification en cas d'échec
+                    slackSend(
+                        channel: "${SLACK_CHANNEL}",
+                        color: 'danger',
+                        message: "❌ Pipeline échoué: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
+                    )
+                } catch (Exception e) {
+                    echo "Erreur lors de l'envoi des notifications d'échec: ${e.message}"
+                }
+            }
+        }
 
-* Try:
+        unstable {
+            echo "Pipeline instable: Notification par mail et Slack"
 
-> Run with --stacktrace option to get the stack trace.
+            script {
+                try {
+                    emailext(
+                        to: "${EMAIL_RECIPIENTS}",
+                        subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                        body: """
+                            <h2>Pipeline instable</h2>
+                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                            <p><strong>Statut:</strong> UNSTABLE</p>
+                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                        """,
+                        mimeType: 'text/html'
+                    )
 
-> Run with --info or --debug option to get more log output.
-
-> Run with --scan to get full insights.
-
-> Get more help at https://help.gradle.org.
-
-
-Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
-
-
-You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
-
-
-For more on this, please refer to https://docs.gradle.org/8.14/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
-
-
-BUILD FAILED in 8s
-
-3 actionable tasks: 1 executed, 2 up-to-date
-
-script returned exit code 1
+                    slackSend(
+                        channel: "${SLACK_CHANNEL}",
+                        color: 'warning',
+                        message: "⚠️ Pipeline instable: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
+                    )
+                } catch (Exception e) {
+                    echo "Erreur lors de l'envoi des notifications d'instabilité: ${e.message}"
+                }
+            }
+        }
+    }
+}
