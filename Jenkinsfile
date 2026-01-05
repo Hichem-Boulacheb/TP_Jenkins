@@ -180,10 +180,5 @@ pipeline {
                 )
             }
         }
-
-        always {
-            // Nettoyage de l'espace de travail
-            cleanWs()
-        }
     }
 }
