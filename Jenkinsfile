@@ -1,13 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        SONARQUBE = 'sonar' // nom du serveur SonarQube configuré dans Jenkins
-        MAVEN_REPO_URL = 'https://mymavenrepo.com/repo/cEmjfkxugPlzLxXg1A2B/'
-        SLACK_CHANNEL = '#dev-team'
-        EMAIL_RECIPIENTS = 'lh_boulacheb@esi.dz'
-    }
-
     options {
         skipStagesAfterUnstable()
     }
@@ -22,6 +15,23 @@ pipeline {
 
                 echo "Archivage des résultats des tests unitaires"
                 junit 'build/test-results/test/*.xml'
+
+                echo "Génération des rapports de tests Cucumber"
+                script {
+                    try {
+                        bat 'gradlew.bat generateCucumberReports'
+                        publishHTML([
+                            allowMissing: true,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: 'build/reports/cucumber/html',
+                            reportFiles: 'overview-features.html',
+                            reportName: 'Cucumber Report'
+                        ])
+                    } catch (Exception e) {
+                        echo "Avertissement: Impossible de générer les rapports Cucumber: ${e.message}"
+                    }
+                }
             }
         }
 
@@ -29,7 +39,7 @@ pipeline {
         stage('Code Analysis') {
             steps {
                 echo "Analyse du code avec SonarQube"
-                withSonarQubeEnv(SONARQUBE) {
+                withSonarQubeEnv('sonar') {
                     bat 'gradlew.bat sonar'
                 }
             }
@@ -50,7 +60,11 @@ pipeline {
             steps {
                 echo "Génération du Jar et de la documentation"
                 bat 'gradlew.bat jar javadoc'
+
+                echo "Archivage du fichier Jar"
                 archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+
+                echo "Archivage de la documentation"
                 archiveArtifacts artifacts: 'build/docs/javadoc/**', fingerprint: true, allowEmptyArchive: true
             }
         }
@@ -68,7 +82,6 @@ pipeline {
     post {
         always {
             echo "Nettoyage et archivage des artefacts"
-            // Pas de rapport Cucumber dans ce projet
         }
 
         success {
@@ -76,9 +89,8 @@ pipeline {
 
             script {
                 try {
-                    // Envoi mail
                     emailext(
-                        to: "${EMAIL_RECIPIENTS}",
+                        to: "lh_boulacheb@esi.dz",
                         subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline exécuté avec succès</h2>
@@ -91,9 +103,8 @@ pipeline {
                         mimeType: 'text/html'
                     )
 
-                    // Envoi Slack
                     slackSend(
-                        channel: "${SLACK_CHANNEL}",
+                        channel: "#dev-team",
                         color: 'good',
                         message: "✅ Pipeline réussi: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
                     )
@@ -108,9 +119,8 @@ pipeline {
 
             script {
                 try {
-                    // Mail de notification en cas d'échec
                     emailext(
-                        to: "${EMAIL_RECIPIENTS}",
+                        to: "lh_boulacheb@esi.dz",
                         subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline échoué</h2>
@@ -123,9 +133,8 @@ pipeline {
                         mimeType: 'text/html'
                     )
 
-                    // Slack de notification en cas d'échec
                     slackSend(
-                        channel: "${SLACK_CHANNEL}",
+                        channel: "#dev-team",
                         color: 'danger',
                         message: "❌ Pipeline échoué: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
                     )
@@ -141,7 +150,7 @@ pipeline {
             script {
                 try {
                     emailext(
-                        to: "${EMAIL_RECIPIENTS}",
+                        to: "lh_boulacheb@esi.dz",
                         subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline instable</h2>
@@ -154,7 +163,7 @@ pipeline {
                     )
 
                     slackSend(
-                        channel: "${SLACK_CHANNEL}",
+                        channel: "#dev-team",
                         color: 'warning',
                         message: "⚠️ Pipeline instable: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
                     )

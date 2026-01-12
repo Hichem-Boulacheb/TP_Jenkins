@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id "com.github.spacialcircumstances.gradle-cucumber-reporting" version "0.1.25"
     id "jacoco"
-    id 'org.sonarqube' version '2.6"'
+    id 'org.sonarqube' version "3.5.0.2730"
     id 'maven-publish'
 }
 
@@ -13,31 +13,31 @@ repositories {
     mavenCentral()
 }
 
-dependencies {
-    testImplementation 'io.cucumber:cucumber-java:6.0.0'
-    testImplementation 'io.cucumber:cucumber-junit:6.0.0'
-    testImplementation 'junit:junit:4.12'
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
+
+dependencies {
+    testImplementation 'io.cucumber:cucumber-java:7.14.0'
+    testImplementation 'io.cucumber:cucumber-junit:7.14.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// Configuration Cucumber Reports
 cucumberReports {
     outputDir = file('build/reports/cucumber/html')
     buildId = '0'
     reports = files('build/reports/cucumber/cucumber.json')
 }
 
+// Configuration JaCoCo
 jacoco {
-    toolVersion = "0.8.10" // Version actuelle de JaCoCo
-}
-
-sonarqube {
-    properties {
-        property "sonar.projectKey", "tp"
-        property "sonar.host.url", "http://localhost:9000"
-        property "sonar.login", "7128bbb949d0a6b6e962be11d2e8e479df761573"
-    }
+    toolVersion = "0.8.10"
 }
 
 jacocoTestReport {
-    dependsOn test // S'assure que les tests sont exécutés avant le rapport
+    dependsOn test
     reports {
         xml.required = true
         csv.required = false
@@ -46,6 +46,21 @@ jacocoTestReport {
     }
 }
 
+// Configuration SonarQube
+sonarqube {
+    properties {
+        property "sonar.projectKey", "tp"
+        property "sonar.projectName", "TP Jenkins Pipeline"
+        property "sonar.host.url", "http://localhost:9000"
+        property "sonar.login", "7128bbb949d0a6b6e962be11d2e8e479df761573"
+        property "sonar.sources", "src/main/java"
+        property "sonar.tests", "src/test/java"
+        property "sonar.java.binaries", "build/classes"
+        property "sonar.coverage.jacoco.xmlReportPaths", "build/reports/jacoco/test/jacocoTestReport.xml"
+    }
+}
+
+// Configuration Publication Maven
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -67,19 +82,29 @@ publishing {
     }
 }
 
-tasks.register('generateDocs', Javadoc) {
-    group = 'Documentation'
-    description = 'Génère la documentation Java'
+// Tâche pour générer la documentation
+javadoc {
     source = sourceSets.main.allJava
     classpath = sourceSets.main.compileClasspath
-    destinationDir = file("$buildDir/docs")
+    destinationDir = file("$buildDir/docs/javadoc")
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
 }
 
+// Configuration des tests
 test {
     useJUnit()
+
+    // Configuration pour générer les rapports Cucumber en JSON
+    systemProperty "cucumber.plugin", "json:build/reports/cucumber/cucumber.json"
+
     finalizedBy jacocoTestReport
+
+    // Génère les rapports même si les tests échouent
+    ignoreFailures = false
 }
 
-tasks.sonar {
-    dependsOn test
+// La tâche sonar dépend des tests
+tasks.named('sonar') {
+    dependsOn test, jacocoTestReport
 }
