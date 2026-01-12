@@ -90,7 +90,7 @@ pipeline {
             script {
                 try {
                     emailext(
-                        to: "lh_boulacheb@esi.dz",
+                        to: "hic.chem2016@gmail.com",
                         subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline exécuté avec succès</h2>
@@ -115,7 +115,7 @@ pipeline {
             script {
                 try {
                     emailext(
-                        to: "lh_boulacheb@esi.dz",
+                        to: "hic.chem2016@gmail.com",
                         subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline échoué</h2>
@@ -140,7 +140,7 @@ pipeline {
             script {
                 try {
                     emailext(
-                        to: "lh_boulacheb@esi.dz",
+                        to: "hic.chem2016@gmail.com",
                         subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline instable</h2>
