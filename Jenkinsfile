@@ -85,7 +85,7 @@ pipeline {
         }
 
         success {
-            echo "Pipeline terminé avec succès: Notification par mail et Slack"
+            echo "Pipeline terminé avec succès: Notification par mail"
 
             script {
                 try {
@@ -102,20 +102,15 @@ pipeline {
                         """,
                         mimeType: 'text/html'
                     )
-
-                    slackSend(
-                        channel: "#dev-team",
-                        color: 'good',
-                        message: "✅ Pipeline réussi: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
-                    )
+                    echo "Email de succès envoyé"
                 } catch (Exception e) {
-                    echo "Erreur lors de l'envoi des notifications de succès: ${e.message}"
+                    echo "Erreur lors de l'envoi de l'email de succès: ${e.message}"
                 }
             }
         }
 
         failure {
-            echo "Pipeline échoué: Notification par mail et Slack"
+            echo "Pipeline échoué: Notification par mail"
 
             script {
                 try {
@@ -132,20 +127,15 @@ pipeline {
                         """,
                         mimeType: 'text/html'
                     )
-
-                    slackSend(
-                        channel: "#dev-team",
-                        color: 'danger',
-                        message: "❌ Pipeline échoué: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
-                    )
+                    echo "Email d'échec envoyé"
                 } catch (Exception e) {
-                    echo "Erreur lors de l'envoi des notifications d'échec: ${e.message}"
+                    echo "Erreur lors de l'envoi de l'email d'échec: ${e.message}"
                 }
             }
         }
 
         unstable {
-            echo "Pipeline instable: Notification par mail et Slack"
+            echo "Pipeline instable: Notification par mail"
 
             script {
                 try {
@@ -161,14 +151,9 @@ pipeline {
                         """,
                         mimeType: 'text/html'
                     )
-
-                    slackSend(
-                        channel: "#dev-team",
-                        color: 'warning',
-                        message: "⚠️ Pipeline instable: ${env.JOB_NAME} #${env.BUILD_NUMBER} (<${env.BUILD_URL}|Voir les détails>)"
-                    )
+                    echo "Email d'instabilité envoyé"
                 } catch (Exception e) {
-                    echo "Erreur lors de l'envoi des notifications d'instabilité: ${e.message}"
+                    echo "Erreur lors de l'envoi de l'email d'instabilité: ${e.message}"
                 }
             }
         }
