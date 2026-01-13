@@ -91,7 +91,7 @@ pipeline {
                 // Envoi Email
                 try {
                     emailext(
-                        to: "hic.chem2016@gmail.com",
+                        to: "lh_boulacheb@esi.dz",
                         subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline exécuté avec succès</h2>
@@ -111,7 +111,7 @@ pipeline {
                 // Envoi Slack
                 try {
                     slackSend(
-                        channel: '#dev-team',
+                        channel: '#ogl',
                         color: 'good',
                         message: """
                             ✅ *Pipeline réussi*
@@ -135,7 +135,7 @@ pipeline {
                 // Envoi Email
                 try {
                     emailext(
-                        to: "hic.chem2016@gmail.com",
+                        to: "lh_boulacheb@esi.dz",
                         subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline échoué</h2>
@@ -155,7 +155,7 @@ pipeline {
                 // Envoi Slack
                 try {
                     slackSend(
-                        channel: '#dev-team',
+                        channel: '#ogl',
                         color: 'danger',
                         message: """
                             ❌ *Pipeline échoué*
@@ -180,7 +180,7 @@ pipeline {
                 // Envoi Email
                 try {
                     emailext(
-                        to: "hic.chem2016@gmail.com",
+                        to: "lh_boulacheb@esi.dz",
                         subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                         body: """
                             <h2>Pipeline instable</h2>
@@ -199,7 +199,7 @@ pipeline {
                 // Envoi Slack
                 try {
                     slackSend(
-                        channel: '#dev-team',
+                        channel: '#ogl',
                         color: 'warning',
                         message: """
                             ⚠️ *Pipeline instable*
