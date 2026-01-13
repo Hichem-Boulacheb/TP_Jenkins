@@ -85,9 +85,10 @@ pipeline {
         }
 
         success {
-            echo "Pipeline terminé avec succès: Notification par mail"
+            echo "Pipeline terminé avec succès: Notification par mail et Slack"
 
             script {
+                // Envoi Email
                 try {
                     emailext(
                         to: "hic.chem2016@gmail.com",
@@ -102,17 +103,36 @@ pipeline {
                         """,
                         mimeType: 'text/html'
                     )
-                    echo "Email de succès envoyé"
+                    echo "✓ Email de succès envoyé"
                 } catch (Exception e) {
-                    echo "Erreur lors de l'envoi de l'email de succès: ${e.message}"
+                    echo "✗ Erreur lors de l'envoi de l'email: ${e.message}"
+                }
+
+                // Envoi Slack
+                try {
+                    slackSend(
+                        channel: '#dev-team',
+                        color: 'good',
+                        message: """
+                            ✅ *Pipeline réussi*
+                            *Projet:* ${env.JOB_NAME}
+                            *Build:* #${env.BUILD_NUMBER}
+                            *Statut:* SUCCESS
+                            *Détails:* ${env.BUILD_URL}
+                        """.stripIndent()
+                    )
+                    echo "✓ Notification Slack envoyée"
+                } catch (Exception e) {
+                    echo "✗ Erreur lors de l'envoi Slack: ${e.message}"
                 }
             }
         }
 
         failure {
-            echo "Pipeline échoué: Notification par mail"
+            echo "Pipeline échoué: Notification par mail et Slack"
 
             script {
+                // Envoi Email
                 try {
                     emailext(
                         to: "hic.chem2016@gmail.com",
@@ -127,17 +147,37 @@ pipeline {
                         """,
                         mimeType: 'text/html'
                     )
-                    echo "Email d'échec envoyé"
+                    echo "✓ Email d'échec envoyé"
                 } catch (Exception e) {
-                    echo "Erreur lors de l'envoi de l'email d'échec: ${e.message}"
+                    echo "✗ Erreur lors de l'envoi de l'email: ${e.message}"
+                }
+
+                // Envoi Slack
+                try {
+                    slackSend(
+                        channel: '#dev-team',
+                        color: 'danger',
+                        message: """
+                            ❌ *Pipeline échoué*
+                            *Projet:* ${env.JOB_NAME}
+                            *Build:* #${env.BUILD_NUMBER}
+                            *Statut:* FAILURE
+                            *Détails:* ${env.BUILD_URL}console
+                            ⚠️ Consultez les logs pour plus d'informations
+                        """.stripIndent()
+                    )
+                    echo "✓ Notification Slack envoyée"
+                } catch (Exception e) {
+                    echo "✗ Erreur lors de l'envoi Slack: ${e.message}"
                 }
             }
         }
 
         unstable {
-            echo "Pipeline instable: Notification par mail"
+            echo "Pipeline instable: Notification par mail et Slack"
 
             script {
+                // Envoi Email
                 try {
                     emailext(
                         to: "hic.chem2016@gmail.com",
@@ -151,9 +191,27 @@ pipeline {
                         """,
                         mimeType: 'text/html'
                     )
-                    echo "Email d'instabilité envoyé"
+                    echo "✓ Email d'instabilité envoyé"
                 } catch (Exception e) {
-                    echo "Erreur lors de l'envoi de l'email d'instabilité: ${e.message}"
+                    echo "✗ Erreur lors de l'envoi de l'email: ${e.message}"
+                }
+
+                // Envoi Slack
+                try {
+                    slackSend(
+                        channel: '#dev-team',
+                        color: 'warning',
+                        message: """
+                            ⚠️ *Pipeline instable*
+                            *Projet:* ${env.JOB_NAME}
+                            *Build:* #${env.BUILD_NUMBER}
+                            *Statut:* UNSTABLE
+                            *Détails:* ${env.BUILD_URL}
+                        """.stripIndent()
+                    )
+                    echo "✓ Notification Slack envoyée"
+                } catch (Exception e) {
+                    echo "✗ Erreur lors de l'envoi Slack: ${e.message}"
                 }
             }
         }
