@@ -1,8 +1,10 @@
 pipeline {
     agent any
+
     environment {
-            SLACK_WEBHOOK = credentials('slack-webhook')
-     }
+        SLACK_WEBHOOK = credentials('slack-webhook')
+    }
+
     options {
         skipStagesAfterUnstable()
     }
@@ -78,138 +80,90 @@ pipeline {
                 bat 'gradlew.bat publish'
             }
         }
-
     }
 
     post {
+
         always {
             echo "Nettoyage et archivage des artefacts"
         }
 
         success {
-            echo "Pipeline terminé avec succès: Notification par mail et Slack"
+            echo "Pipeline terminé avec succès"
 
             script {
-                // Envoi Email
-                try {
-                    emailext(
-                        to: "lh_boulacheb@esi.dz",
-                        subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                        body: """
-                            <h2>Pipeline exécuté avec succès</h2>
-                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
-                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
-                            <p><strong>Statut:</strong> SUCCESS</p>
-                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
-                            <p>Le déploiement a été effectué avec succès.</p>
-                        """,
-                        mimeType: 'text/html'
-                    )
-                    echo "✓ Email de succès envoyé"
-                } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi de l'email: ${e.message}"
-                }
+                // Email
+                emailext(
+                    to: "lh_boulacheb@esi.dz",
+                    subject: "✅ Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        <h2>Pipeline exécuté avec succès</h2>
+                        <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                        <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                        <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                    """,
+                    mimeType: 'text/html'
+                )
 
-                // Envoi Slack
-                // Notification Slack via Webhook (curl)
-                try {
-                    node{
-                    bat """
-                                    curl -X POST -H "Content-type: application/json" ^
-                                    --data "{\\"text\\":\\"✅ Pipeline SUCCESS\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
-                                    %SLACK_WEBHOOK%
-                                """
-                    }
-                    echo "✓ Notification Slack (curl) envoyée"
-                } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
-                }
-
+                // Slack
+                bat """
+                    curl -X POST -H "Content-type: application/json" ^
+                    --data "{\\"text\\":\\"✅ Pipeline SUCCESS\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
+                    %SLACK_WEBHOOK%
+                """
             }
         }
 
         failure {
-            echo "Pipeline échoué: Notification par mail et Slack"
+            echo "Pipeline échoué"
 
             script {
-                // Envoi Email
-                try {
-                    emailext(
-                        to: "lh_boulacheb@esi.dz",
-                        subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                        body: """
-                            <h2>Pipeline échoué</h2>
-                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
-                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
-                            <p><strong>Statut:</strong> ${currentBuild.currentResult}</p>
-                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
-                            <p>Veuillez consulter les logs pour plus de détails.</p>
-                        """,
-                        mimeType: 'text/html'
-                    )
-                    echo "✓ Email d'échec envoyé"
-                } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi de l'email: ${e.message}"
-                }
+                // Email
+                emailext(
+                    to: "lh_boulacheb@esi.dz",
+                    subject: "❌ Pipeline Failure: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        <h2>Pipeline échoué</h2>
+                        <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                        <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                        <p><strong>Statut:</strong> FAILURE</p>
+                        <p><strong>Logs:</strong> ${env.BUILD_URL}console</p>
+                    """,
+                    mimeType: 'text/html'
+                )
 
-                // Envoi Slack
-                // Notification Slack via Webhook (curl)
-                try {
-                node{
-                    bat """
-                                                        curl -X POST -H "Content-type: application/json" ^
-                                                        --data "{\\"text\\":\\"❌ Pipeline FAILURE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nLogs: ${env.BUILD_URL}console\\"}" ^
-                                                        %SLACK_WEBHOOK%
-                                                    """
-                }
-
-                    echo "✓ Notification Slack (curl) envoyée"
-                } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
-                }
-
+                // Slack
+                bat """
+                    curl -X POST -H "Content-type: application/json" ^
+                    --data "{\\"text\\":\\"❌ Pipeline FAILURE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nLogs: ${env.BUILD_URL}console\\"}" ^
+                    %SLACK_WEBHOOK%
+                """
             }
         }
 
         unstable {
-            echo "Pipeline instable: Notification par mail et Slack"
+            echo "Pipeline instable"
 
             script {
-                // Envoi Email
-                try {
-                    emailext(
-                        to: "lh_boulacheb@esi.dz",
-                        subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-                        body: """
-                            <h2>Pipeline instable</h2>
-                            <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
-                            <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
-                            <p><strong>Statut:</strong> UNSTABLE</p>
-                            <p><strong>URL:</strong> ${env.BUILD_URL}</p>
-                        """,
-                        mimeType: 'text/html'
-                    )
-                    echo "✓ Email d'instabilité envoyé"
-                } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi de l'email: ${e.message}"
-                }
+                // Email
+                emailext(
+                    to: "lh_boulacheb@esi.dz",
+                    subject: "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                    body: """
+                        <h2>Pipeline instable</h2>
+                        <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
+                        <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
+                        <p><strong>URL:</strong> ${env.BUILD_URL}</p>
+                    """,
+                    mimeType: 'text/html'
+                )
 
-                // Envoi Slack
-                // Notification Slack via Webhook (curl)
-                try {
-                node{
-                    bat """
-                                                        curl -X POST -H "Content-type: application/json" ^
-                                                        --data "{\\"text\\":\\"⚠️ Pipeline UNSTABLE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
-                                                        %SLACK_WEBHOOK%
-                                                    """
-                }
-
-                    echo "✓ Notification Slack (curl) envoyée"
-                } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
-                }
-
+                // Slack
+                bat """
+                    curl -X POST -H "Content-type: application/json" ^
+                    --data "{\\"text\\":\\"⚠️ Pipeline UNSTABLE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
+                    %SLACK_WEBHOOK%
+                """
             }
         }
     }
