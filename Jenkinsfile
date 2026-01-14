@@ -1,6 +1,8 @@
 pipeline {
     agent any
-
+    environment {
+            SLACK_WEBHOOK = credentials('slack-webhook')
+     }
     options {
         skipStagesAfterUnstable()
     }
@@ -109,22 +111,18 @@ pipeline {
                 }
 
                 // Envoi Slack
+                // Notification Slack via Webhook (curl)
                 try {
-                    slackSend(
-                        channel: '#ogl',
-                        color: 'good',
-                        message: """
-                            ✅ *Pipeline réussi*
-                            *Projet:* ${env.JOB_NAME}
-                            *Build:* #${env.BUILD_NUMBER}
-                            *Statut:* SUCCESS
-                            *Détails:* ${env.BUILD_URL}
-                        """.stripIndent()
-                    )
-                    echo "✓ Notification Slack envoyée"
+                    bat """
+                                    curl -X POST -H "Content-type: application/json" ^
+                                    --data "{\\"text\\":\\"✅ Pipeline SUCCESS\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
+                                    %SLACK_WEBHOOK%
+                                """
+                    echo "✓ Notification Slack (curl) envoyée"
                 } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi Slack: ${e.message}"
+                    echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
                 }
+
             }
         }
 
@@ -153,23 +151,18 @@ pipeline {
                 }
 
                 // Envoi Slack
+                // Notification Slack via Webhook (curl)
                 try {
-                    slackSend(
-                        channel: '#ogl',
-                        color: 'danger',
-                        message: """
-                            ❌ *Pipeline échoué*
-                            *Projet:* ${env.JOB_NAME}
-                            *Build:* #${env.BUILD_NUMBER}
-                            *Statut:* FAILURE
-                            *Détails:* ${env.BUILD_URL}console
-                            ⚠️ Consultez les logs pour plus d'informations
-                        """.stripIndent()
-                    )
-                    echo "✓ Notification Slack envoyée"
+                     bat """
+                                    curl -X POST -H "Content-type: application/json" ^
+                                    --data "{\\"text\\":\\"❌ Pipeline FAILURE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nLogs: ${env.BUILD_URL}console\\"}" ^
+                                    %SLACK_WEBHOOK%
+                                """
+                    echo "✓ Notification Slack (curl) envoyée"
                 } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi Slack: ${e.message}"
+                    echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
                 }
+
             }
         }
 
@@ -197,22 +190,18 @@ pipeline {
                 }
 
                 // Envoi Slack
+                // Notification Slack via Webhook (curl)
                 try {
-                    slackSend(
-                        channel: '#ogl',
-                        color: 'warning',
-                        message: """
-                            ⚠️ *Pipeline instable*
-                            *Projet:* ${env.JOB_NAME}
-                            *Build:* #${env.BUILD_NUMBER}
-                            *Statut:* UNSTABLE
-                            *Détails:* ${env.BUILD_URL}
-                        """.stripIndent()
-                    )
-                    echo "✓ Notification Slack envoyée"
+                    bat """
+                                    curl -X POST -H "Content-type: application/json" ^
+                                    --data "{\\"text\\":\\"⚠️ Pipeline UNSTABLE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
+                                    %SLACK_WEBHOOK%
+                                """
+                    echo "✓ Notification Slack (curl) envoyée"
                 } catch (Exception e) {
-                    echo "✗ Erreur lors de l'envoi Slack: ${e.message}"
+                    echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
                 }
+
             }
         }
     }
