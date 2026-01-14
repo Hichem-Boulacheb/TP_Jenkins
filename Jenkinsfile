@@ -17,21 +17,10 @@ pipeline {
                 junit 'build/test-results/test/*.xml'
 
                 echo "Génération des rapports de tests Cucumber"
-                script {
-                    try {
-                        bat 'gradlew.bat generateCucumberReports'
-                        publishHTML([
-                            allowMissing: true,
-                            alwaysLinkToLastBuild: true,
-                            keepAll: true,
-                            reportDir: 'build/reports/cucumber/html',
-                            reportFiles: 'overview-features.html',
-                            reportName: 'Cucumber Report'
-                        ])
-                    } catch (Exception e) {
-                        echo "Avertissement: Impossible de générer les rapports Cucumber:  ${e.message}"
-                    }
-                }
+                 cucumber buildStatus: 'UNSTABLE',
+                                reportTitle: 'My report',
+                                fileIncludePattern: 'reports/*.json',
+                                trendsLimit: 10
             }
         }
 
