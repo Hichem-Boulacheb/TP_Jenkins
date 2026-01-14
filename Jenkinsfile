@@ -113,11 +113,13 @@ pipeline {
                 // Envoi Slack
                 // Notification Slack via Webhook (curl)
                 try {
+                    node{
                     bat """
                                     curl -X POST -H "Content-type: application/json" ^
                                     --data "{\\"text\\":\\"✅ Pipeline SUCCESS\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
                                     %SLACK_WEBHOOK%
                                 """
+                    }
                     echo "✓ Notification Slack (curl) envoyée"
                 } catch (Exception e) {
                     echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
@@ -153,11 +155,14 @@ pipeline {
                 // Envoi Slack
                 // Notification Slack via Webhook (curl)
                 try {
-                     bat """
-                                    curl -X POST -H "Content-type: application/json" ^
-                                    --data "{\\"text\\":\\"❌ Pipeline FAILURE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nLogs: ${env.BUILD_URL}console\\"}" ^
-                                    %SLACK_WEBHOOK%
-                                """
+                node{
+                    bat """
+                                                        curl -X POST -H "Content-type: application/json" ^
+                                                        --data "{\\"text\\":\\"❌ Pipeline FAILURE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nLogs: ${env.BUILD_URL}console\\"}" ^
+                                                        %SLACK_WEBHOOK%
+                                                    """
+                }
+
                     echo "✓ Notification Slack (curl) envoyée"
                 } catch (Exception e) {
                     echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
@@ -192,11 +197,14 @@ pipeline {
                 // Envoi Slack
                 // Notification Slack via Webhook (curl)
                 try {
+                node{
                     bat """
-                                    curl -X POST -H "Content-type: application/json" ^
-                                    --data "{\\"text\\":\\"⚠️ Pipeline UNSTABLE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
-                                    %SLACK_WEBHOOK%
-                                """
+                                                        curl -X POST -H "Content-type: application/json" ^
+                                                        --data "{\\"text\\":\\"⚠️ Pipeline UNSTABLE\\nProjet: ${env.JOB_NAME}\\nBuild: #${env.BUILD_NUMBER}\\nURL: ${env.BUILD_URL}\\"}" ^
+                                                        %SLACK_WEBHOOK%
+                                                    """
+                }
+
                     echo "✓ Notification Slack (curl) envoyée"
                 } catch (Exception e) {
                     echo "✗ Erreur lors de l'envoi Slack (curl): ${e.message}"
