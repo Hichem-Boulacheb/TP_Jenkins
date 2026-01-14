@@ -1,6 +1,8 @@
 pipeline {
     agent any
-
+     triggers {
+            githubPush()
+      }
     options {
         skipStagesAfterUnstable()
     }
