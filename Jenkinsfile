@@ -14,7 +14,7 @@ pipeline {
                 bat 'gradlew.bat clean test'
 
                 echo "Archivage des résultats des tests unitaires"
-                junit 'build/test-results/test/*. xml'
+                junit 'build/test-results/test/*.xml'
 
                 echo "Génération des rapports de tests Cucumber"
                 script {
@@ -89,7 +89,7 @@ pipeline {
                 echo "Pipeline terminé avec succès"
 
                 emailext(
-                    to: "lh_boulacheb@esi. dz",
+                    to: "lh_boulacheb@esi.dz",
                     subject: "✅ Pipeline Success:  ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                     body: """
                         <h2>Pipeline exécuté avec succès</h2>
@@ -138,20 +138,20 @@ pipeline {
                 echo "Pipeline instable"
 
                 emailext(
-                    to: "lh_boulacheb@esi. dz",
-                    subject:  "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env. BUILD_NUMBER}",
+                    to: "lh_boulacheb@esi.dz",
+                    subject:  "⚠️ Pipeline Unstable: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
                     body: """
                         <h2>Pipeline instable</h2>
                         <p><strong>Projet:</strong> ${env.JOB_NAME}</p>
                         <p><strong>Build:</strong> #${env.BUILD_NUMBER}</p>
-                        <p><strong>URL:</strong> <a href="${env.BUILD_URL}">${env. BUILD_URL}</a></p>
+                        <p><strong>URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
                     """,
                     mimeType: 'text/html'
                 )
 
                 withCredentials([string(credentialsId: 'SLACK_WEBHOOK', variable: 'SLACK_WEBHOOK_URL')]) {
                     bat """
-                        curl -X POST -H "Content-type:  application/json" --data "{\\"text\\":\\"Pipeline instable\\n*Projet:* ${env.JOB_NAME}\\n*Build:* #${env.BUILD_NUMBER}\\n*URL:* ${env. BUILD_URL}\\",\\"username\\":\\"Jenkins\\",\\"icon_emoji\\":\\":warning:\\"}" %SLACK_WEBHOOK_URL%
+                        curl -X POST -H "Content-type:  application/json" --data "{\\"text\\":\\"Pipeline instable\\n*Projet:* ${env.JOB_NAME}\\n*Build:* #${env.BUILD_NUMBER}\\n*URL:* ${env.BUILD_URL}\\",\\"username\\":\\"Jenkins\\",\\"icon_emoji\\":\\":warning:\\"}" %SLACK_WEBHOOK_URL%
                     """
                 }
             }
