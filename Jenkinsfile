@@ -11,7 +11,7 @@ pipeline {
         stage('Test') {
             steps {
                 echo "Phase Test:  Lancement des tests unitaires"
-                bat 'gradlew. bat clean test'
+                bat 'gradlew.bat clean test'
 
                 echo "Archivage des résultats des tests unitaires"
                 junit 'build/test-results/test/*. xml'
